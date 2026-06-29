@@ -81,10 +81,10 @@ export function PixelSwarm({ className, gap = 14, dot = 5 }: PixelSwarmProps) {
           // Swarm: drift each cell along the flow field.
           const nx = gx * 0.18;
           const ny = gy * 0.18;
-          const f1 = flow(nx, ny, t * 0.4);
-          const f2 = flow(ny + 5.2, nx - 3.1, t * 0.3);
-          const driftX = f1 * gap * 0.9;
-          const driftY = f2 * gap * 0.9;
+          const f1 = flow(nx, ny, t * 0.75);
+          const f2 = flow(ny + 5.2, nx - 3.1, t * 0.6);
+          const driftX = f1 * gap * 1.7;
+          const driftY = f2 * gap * 1.7;
 
           const px = baseX + driftX;
           const py = baseY + driftY;
