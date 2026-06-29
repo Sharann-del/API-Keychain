@@ -12,18 +12,33 @@ from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 # a per-provider dict (not just a URL) so it can be partially overridden per-user
 # later (e.g. a user-supplied base_url) without changing this structure.
 PROVIDERS: Dict[str, Dict[str, Any]] = {
-    "gemini": {"base_url": "https://generativelanguage.googleapis.com/v1beta/openai", "openai_compatible": True},
+    "gemini": {
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+        "openai_compatible": True,
+    },
     "groq": {"base_url": "https://api.groq.com/openai/v1", "openai_compatible": True},
     "cerebras": {"base_url": "https://api.cerebras.ai/v1", "openai_compatible": True},
     "mistral": {"base_url": "https://api.mistral.ai/v1", "openai_compatible": True},
     "deepseek": {"base_url": "https://api.deepseek.com/v1", "openai_compatible": True},
-    "openrouter": {"base_url": "https://openrouter.ai/api/v1", "openai_compatible": True},
+    "openrouter": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "openai_compatible": True,
+    },
     "together": {"base_url": "https://api.together.xyz/v1", "openai_compatible": True},
-    "cohere": {"base_url": "https://api.cohere.ai/compatibility/v1", "openai_compatible": True},
-    "nim": {"base_url": "https://integrate.api.nvidia.com/v1", "openai_compatible": True},
+    "cohere": {
+        "base_url": "https://api.cohere.ai/compatibility/v1",
+        "openai_compatible": True,
+    },
+    "nim": {
+        "base_url": "https://integrate.api.nvidia.com/v1",
+        "openai_compatible": True,
+    },
     "sambanova": {"base_url": "https://api.sambanova.ai/v1", "openai_compatible": True},
     "hf": {"base_url": "https://router.huggingface.co/v1", "openai_compatible": True},
-    "cf": {"base_url": "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1", "openai_compatible": True},
+    "cf": {
+        "base_url": "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1",
+        "openai_compatible": True,
+    },
 }
 
 # Convenience map provider -> base_url, derived from the catalog. Kept for the

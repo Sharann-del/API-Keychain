@@ -232,7 +232,9 @@ async def _validation_exception_handler(request: Request, exc: RequestValidation
 
 
 def require_key(
-    authorization: Optional[str] = Header(default=None, description="Bearer <api-keychain-key>"),
+    authorization: Optional[str] = Header(
+        default=None, description="Bearer <api-keychain-key>"
+    ),
     x_api_key: Optional[str] = Header(default=None, alias="x-api-key"),
     db: Session = Depends(get_db),
 ) -> KeychainKey:
@@ -1020,12 +1022,18 @@ def _all_failed_error(exc: AllProvidersFailed) -> JSONResponse:
 def _load_provider_keys(db: Session, user_id: str) -> Dict[str, List[tuple]]:
     rows = (
         db.execute(
-            select(ProviderKey).where(ProviderKey.user_id == user_id).order_by(ProviderKey.id)
-        ).scalars().all()
+            select(ProviderKey)
+            .where(ProviderKey.user_id == user_id)
+            .order_by(ProviderKey.id)
+        )
+        .scalars()
+        .all()
     )
     provider_keys: Dict[str, List[tuple]] = {}
     for row in rows:
-        provider_keys.setdefault(row.provider, []).append((row.key_label, row.encrypted_key))
+        provider_keys.setdefault(row.provider, []).append(
+            (row.key_label, row.encrypted_key)
+        )
     return provider_keys
 
 
@@ -1126,11 +1134,17 @@ async def anthropic_messages(
     if key.rate_limit_per_minute:
         used = _key_requests_last_minute(db, key.id)
         if used >= key.rate_limit_per_minute:
-            return anthropic_error(429, "Rate limit reached for this keychain key.", "rate_limit_error")
+            return anthropic_error(
+                429, "Rate limit reached for this keychain key.", "rate_limit_error"
+            )
 
     provider_keys = _load_provider_keys(db, user.id)
     if not provider_keys:
-        return anthropic_error(400, "No provider keys configured. Add at least one via the dashboard.", "invalid_request_error")
+        return anthropic_error(
+            400,
+            "No provider keys configured. Add at least one via the dashboard.",
+            "invalid_request_error",
+        )
 
     request_model = body.get("model") or "claude-sonnet-4-6"
     effort = resolve_anthropic_effort(body)
@@ -1138,15 +1152,38 @@ async def anthropic_messages(
 
     table = _effective_table(db, user.id)
     prefs = _load_preferences(db, user.id)
-    models = effective_cascade(table, effort, excluded_models=set(prefs["excluded_models"]), excluded_providers=set(prefs["excluded_providers"]), preferred_providers=prefs["preferred_providers"])
+    models = effective_cascade(
+        table,
+        effort,
+        excluded_models=set(prefs["excluded_models"]),
+        excluded_providers=set(prefs["excluded_providers"]),
+        preferred_providers=prefs["preferred_providers"],
+    )
     deprioritized = _cooling_down_providers(db, user.id)
 
     if body.get("stream"):
-        return await _stream_anthropic_messages(db, user, key, effort, forward_body, provider_keys, models, deprioritized, request_model)
+        return await _stream_anthropic_messages(
+            db,
+            user,
+            key,
+            effort,
+            forward_body,
+            provider_keys,
+            models,
+            deprioritized,
+            request_model,
+        )
 
     started = time.perf_counter()
     try:
-        result = await route_chat_completion(models=models, body=forward_body, provider_keys=provider_keys, deprioritized_providers=deprioritized, rotation_id=user.id, effort=effort)
+        result = await route_chat_completion(
+            models=models,
+            body=forward_body,
+            provider_keys=provider_keys,
+            deprioritized_providers=deprioritized,
+            rotation_id=user.id,
+            effort=effort,
+        )
     except NoModelsAvailable as exc:
         _log_request(db, user.id, effort, [], None, started, 409, key.id)
         return anthropic_error(409, str(exc), "invalid_request_error")
@@ -1160,10 +1197,26 @@ async def anthropic_messages(
     return openai_to_anthropic_message(result.data, request_model)
 
 
-async def _stream_anthropic_messages(db, user, key, effort, forward_body, provider_keys, models, deprioritized, request_model):
+async def _stream_anthropic_messages(
+    db,
+    user,
+    key,
+    effort,
+    forward_body,
+    provider_keys,
+    models,
+    deprioritized,
+    request_model,
+):
     started = time.perf_counter()
     try:
-        handle = await open_stream(models=models, body=forward_body, provider_keys=provider_keys, deprioritized_providers=deprioritized, rotation_id=user.id)
+        handle = await open_stream(
+            models=models,
+            body=forward_body,
+            provider_keys=provider_keys,
+            deprioritized_providers=deprioritized,
+            rotation_id=user.id,
+        )
     except NoModelsAvailable as exc:
         _log_request(db, user.id, effort, [], None, started, 409, key.id)
         return anthropic_error(409, str(exc), "invalid_request_error")
@@ -1176,14 +1229,26 @@ async def _stream_anthropic_messages(db, user, key, effort, forward_body, provid
     _log_stream(db, user.id, effort, handle, started, key.id)
 
     async def _bytes() -> AsyncIterator[bytes]:
-        async for chunk in convert_openai_stream_to_anthropic(iter_stream(handle), request_model):
+        async for chunk in convert_openai_stream_to_anthropic(
+            iter_stream(handle), request_model
+        ):
             yield chunk
 
-    return StreamingResponse(_bytes(), media_type="text/event-stream", headers={"X-Keychain-Provider": handle.provider, "X-Keychain-Model": handle.model_entry, "Cache-Control": "no-cache"})
+    return StreamingResponse(
+        _bytes(),
+        media_type="text/event-stream",
+        headers={
+            "X-Keychain-Provider": handle.provider,
+            "X-Keychain-Model": handle.model_entry,
+            "Cache-Control": "no-cache",
+        },
+    )
 
 
 @app.post("/v1/messages/count_tokens")
-async def anthropic_count_tokens(request: Request, key: KeychainKey = Depends(require_key)):
+async def anthropic_count_tokens(
+    request: Request, key: KeychainKey = Depends(require_key)
+):
     """Token estimate for Claude Code budgeting."""
     try:
         body = await request.json()
@@ -1318,7 +1383,8 @@ def _key_requests_last_minute(db: Session, key_id: int) -> int:
                 RequestLog.keychain_key_id == key_id,
                 RequestLog.timestamp >= since,
             )
-        ) or 0
+        )
+        or 0
     )
 
 
@@ -1614,11 +1680,28 @@ def openai_models(
         }
         for tier in ("low", "medium", "high")
     ]
-    data.extend([
-        {"id": "claude-haiku-4-5", "object": "model", "created": created, "owned_by": "api-keychain"},
-        {"id": "claude-sonnet-4-6", "object": "model", "created": created, "owned_by": "api-keychain"},
-        {"id": "claude-opus-4-6", "object": "model", "created": created, "owned_by": "api-keychain"},
-    ])
+    data.extend(
+        [
+            {
+                "id": "claude-haiku-4-5",
+                "object": "model",
+                "created": created,
+                "owned_by": "api-keychain",
+            },
+            {
+                "id": "claude-sonnet-4-6",
+                "object": "model",
+                "created": created,
+                "owned_by": "api-keychain",
+            },
+            {
+                "id": "claude-opus-4-6",
+                "object": "model",
+                "created": created,
+                "owned_by": "api-keychain",
+            },
+        ]
+    )
 
     table = _effective_table(db, key.user_id)
     # Only advertise models the user can actually reach — i.e. whose provider
