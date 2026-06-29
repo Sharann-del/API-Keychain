@@ -428,6 +428,14 @@ export default function PlaygroundPage() {
         } catch {
           /* ignore */
         }
+        if (
+          res.status === 401 &&
+          /invalid or revoked/i.test(message) &&
+          keyMode === "cached"
+        ) {
+          message =
+            "Invalid or revoked API key. Your saved key may be from local development — regenerate it in Settings, or paste a production ak- key above.";
+        }
         throw new Error(message);
       }
 

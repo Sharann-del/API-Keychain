@@ -52,6 +52,10 @@ public gateway URL such as `https://api.apikeychain.dev`, not
 
 - Use the **keychain** `ak-` key, not the Supabase JWT
 - Ensure the `Authorization: Bearer` header is present (or `x-api-key` for Anthropic clients)
+- **Local vs production:** Keys are stored per gateway database. A key minted on
+  `localhost:8000` will not work on `api.apikeychain.dev`. On the production
+  dashboard, open **Settings → Regenerate primary key** (or sign out and back in
+  after deploying the latest dashboard — it auto-mints a key for the current API).
 - Rotate the key if it was revoked
 
 ### `400 No provider keys configured`

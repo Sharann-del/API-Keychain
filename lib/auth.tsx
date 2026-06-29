@@ -5,7 +5,7 @@ import type { Session, User } from "@supabase/supabase-js";
 
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
 import { apiFetch } from "@/lib/api";
-import { savePrimaryKey, loadPrimaryKey } from "@/lib/keystore";
+import { savePrimaryKey, loadPrimaryKey, hasStalePrimaryKey, clearPrimaryKey } from "@/lib/keystore";
 import type {
   CreatedKeychainKey,
   InitUserResponse,
@@ -41,6 +41,10 @@ async function bootstrapUser(userId: string, token: string): Promise<void> {
     { token }
   );
   const hasPrimary = existing.keys.some((k) => k.is_primary && !k.revoked);
+
+  if (hasStalePrimaryKey(userId)) {
+    clearPrimaryKey(userId);
+  }
   const hasCached = Boolean(loadPrimaryKey(userId));
 
   if (!hasPrimary || !hasCached) {
