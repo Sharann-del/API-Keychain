@@ -40,12 +40,6 @@ const PROMPT_CHIPS = [
   "Stream completions from any model",
 ];
 
-const USE_CASES = [
-  { label: "Developers", href: "#start" },
-  { label: "Side projects", href: "#tiers" },
-  { label: "Teams", href: "#features" },
-];
-
 export default function LandingPage() {
   return (
     <div className="relative overflow-x-clip bg-background">
@@ -55,7 +49,6 @@ export default function LandingPage() {
       <LogoWall />
       <StatsBand />
       <Features />
-      <UseCases />
       <HowItWorks />
       <ModelsByProvider />
       <Tiers />
@@ -251,13 +244,11 @@ const FEATURES = [
     icon: Network,
     title: "Effort-based routing",
     body: "Pick fast, balanced, or best (`keychain-low` / `-medium` / `-high`). The router cascades through free models until one answers.",
-    span: "lg:col-span-2",
   },
   {
     icon: MessageSquare,
     title: "Claude Code ready",
     body: "Native Anthropic Messages API with streaming, tools, and token counting — routed through your free-tier providers.",
-    span: "lg:col-span-2",
   },
   {
     icon: RefreshCw,
@@ -300,14 +291,14 @@ function Features() {
           title="A control plane for free AI inference"
           subtitle="Routing, failover, key management and observability — in one OpenAI-compatible gateway."
         />
-        <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {FEATURES.map((f, i) => {
             const Icon = f.icon;
             return (
               <Reveal
                 key={f.title}
-                delay={(i % 3) * 70}
-                className={cn("surface p-6", f.span ?? "")}
+                delay={(i % 4) * 70}
+                className="surface flex h-full flex-col p-6"
               >
                 <Icon className="mb-4 h-5 w-5 text-foreground" strokeWidth={1.6} />
                 <h3 className="font-heading text-base font-medium tracking-tight">
@@ -319,39 +310,6 @@ function Features() {
               </Reveal>
             );
           })}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ------------------------------------------------------------- Use cases */
-
-function UseCases() {
-  return (
-    <section className="border-y border-border px-5 py-16 sm:px-8">
-      <div className="mx-auto max-w-6xl">
-        <SectionHeading
-          eyebrow="Explore more"
-          title="Built for how you actually ship"
-          align="center"
-        />
-        <div className="mt-10 grid gap-4 sm:grid-cols-3">
-          {USE_CASES.map((u, i) => (
-            <Reveal key={u.label} delay={i * 80}>
-              <a
-                href={u.href}
-                className="surface surface-interactive flex h-full flex-col justify-between p-6"
-              >
-                <span className="font-heading text-xl font-medium tracking-tight">
-                  {u.label}
-                </span>
-                <span className="mt-8 inline-flex items-center gap-1 text-sm text-muted-foreground">
-                  Learn more <ArrowRight className="h-3.5 w-3.5" />
-                </span>
-              </a>
-            </Reveal>
-          ))}
         </div>
       </div>
     </section>
