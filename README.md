@@ -129,8 +129,7 @@ Point any **OpenAI Chat Completions** client at the gateway and select an effort
 tier as the model. For **Claude Code**, set `ANTHROPIC_BASE_URL` to your gateway
 (without `/v1`) and `ANTHROPIC_API_KEY` to your `ak-` key.
 
-<details open>
-<summary><b>Python</b></summary>
+### Python
 
 ```python
 from openai import OpenAI
@@ -147,10 +146,7 @@ resp = client.chat.completions.create(
 print(resp.choices[0].message.content)
 ```
 
-</details>
-
-<details>
-<summary><b>TypeScript</b></summary>
+### TypeScript
 
 ```ts
 import OpenAI from "openai";
@@ -166,10 +162,7 @@ const resp = await client.chat.completions.create({
 });
 ```
 
-</details>
-
-<details>
-<summary><b>Claude Code</b></summary>
+### Claude Code
 
 ```sh
 export ANTHROPIC_BASE_URL="http://localhost:8000"
@@ -180,10 +173,7 @@ Claude Code calls `POST /v1/messages`. Model names like `claude-sonnet-4-6` map
 to effort tiers (`haiku` → low, `sonnet` → medium, `opus` → high) before routing
 through your provider cascade.
 
-</details>
-
-<details>
-<summary><b>curl</b></summary>
+### curl
 
 ```sh
 curl http://localhost:8000/v1/chat/completions \
@@ -194,8 +184,6 @@ curl http://localhost:8000/v1/chat/completions \
     "messages": [{"role": "user", "content": "Hello!"}]
   }'
 ```
-
-</details>
 
 **Compatibility note** — the gateway implements OpenAI Chat Completions, OpenAI
 model listing, and Anthropic Messages. Tools that require other protocols need a
