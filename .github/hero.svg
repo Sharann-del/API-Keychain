@@ -1,0 +1,62 @@
+<svg width="800" height="260" viewBox="0 0 800 260" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="API Keychain — one key for every free AI model">
+  <style>
+    svg { color: #1f2328; }
+    @media (prefers-color-scheme: dark) { svg { color: #e6edf3; } }
+  </style>
+  <defs>
+    <!-- Converging lanes: many providers -> one key -->
+    <path id="l1" d="M250 30 Q330 42 400 70" />
+    <path id="l2" d="M240 50 Q330 56 400 70" />
+    <path id="l3" d="M236 70 Q330 70 400 70" />
+    <path id="l4" d="M240 90 Q330 84 400 70" />
+    <path id="l5" d="M250 110 Q330 98 400 70" />
+    <path id="out" d="M420 70 L552 70" />
+  </defs>
+
+  <!-- static connectors -->
+  <g stroke="#8B949E" stroke-opacity="0.30" stroke-width="1.5" fill="none">
+    <use href="#l1" /><use href="#l2" /><use href="#l3" /><use href="#l4" /><use href="#l5" />
+  </g>
+  <path d="M420 70 L552 70" stroke="#8B949E" stroke-opacity="0.30" stroke-width="1.5" />
+
+  <!-- provider nodes -->
+  <g fill="#8B949E">
+    <circle cx="250" cy="30" r="4.5"><animate attributeName="fill-opacity" values="0.5;1;0.5" dur="3s" begin="0s" repeatCount="indefinite" /></circle>
+    <circle cx="240" cy="50" r="4.5"><animate attributeName="fill-opacity" values="0.5;1;0.5" dur="3s" begin="0.5s" repeatCount="indefinite" /></circle>
+    <circle cx="236" cy="70" r="4.5"><animate attributeName="fill-opacity" values="0.5;1;0.5" dur="3s" begin="1s" repeatCount="indefinite" /></circle>
+    <circle cx="240" cy="90" r="4.5"><animate attributeName="fill-opacity" values="0.5;1;0.5" dur="3s" begin="1.5s" repeatCount="indefinite" /></circle>
+    <circle cx="250" cy="110" r="4.5"><animate attributeName="fill-opacity" values="0.5;1;0.5" dur="3s" begin="2s" repeatCount="indefinite" /></circle>
+  </g>
+
+  <!-- flowing packets inward -->
+  <g fill="currentColor">
+    <circle r="3.5"><animateMotion dur="2s" begin="0s"   repeatCount="indefinite"><mpath href="#l1" /></animateMotion><animate attributeName="opacity" values="0;1;1;0" dur="2s" begin="0s"   repeatCount="indefinite" /></circle>
+    <circle r="3.5"><animateMotion dur="2s" begin="0.4s" repeatCount="indefinite"><mpath href="#l2" /></animateMotion><animate attributeName="opacity" values="0;1;1;0" dur="2s" begin="0.4s" repeatCount="indefinite" /></circle>
+    <circle r="3.5"><animateMotion dur="2s" begin="0.8s" repeatCount="indefinite"><mpath href="#l3" /></animateMotion><animate attributeName="opacity" values="0;1;1;0" dur="2s" begin="0.8s" repeatCount="indefinite" /></circle>
+    <circle r="3.5"><animateMotion dur="2s" begin="1.2s" repeatCount="indefinite"><mpath href="#l4" /></animateMotion><animate attributeName="opacity" values="0;1;1;0" dur="2s" begin="1.2s" repeatCount="indefinite" /></circle>
+    <circle r="3.5"><animateMotion dur="2s" begin="1.6s" repeatCount="indefinite"><mpath href="#l5" /></animateMotion><animate attributeName="opacity" values="0;1;1;0" dur="2s" begin="1.6s" repeatCount="indefinite" /></circle>
+  </g>
+
+  <!-- the key ring -->
+  <circle cx="400" cy="70" r="20" fill="none" stroke="currentColor" stroke-width="2.5">
+    <animate attributeName="stroke-opacity" values="0.6;1;0.6" dur="3s" repeatCount="indefinite" />
+  </circle>
+  <circle cx="400" cy="64" r="6" fill="currentColor" />
+  <rect x="399" y="70" width="2" height="12" rx="1" fill="currentColor" />
+  <rect x="399" y="78" width="6" height="2" rx="1" fill="currentColor" />
+
+  <!-- output packet to single endpoint -->
+  <g fill="currentColor">
+    <circle r="3.5"><animateMotion dur="1.6s" begin="1s" repeatCount="indefinite"><mpath href="#out" /></animateMotion><animate attributeName="opacity" values="0;1;1;0" dur="1.6s" begin="1s" repeatCount="indefinite" /></circle>
+  </g>
+  <circle cx="556" cy="70" r="7" fill="none" stroke="currentColor" stroke-width="2.5" />
+  <circle cx="556" cy="70" r="2.5" fill="currentColor" />
+
+  <!-- captions -->
+  <text x="243" y="138" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#8B949E" letter-spacing="0.5">12 free providers</text>
+  <text x="556" y="98" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#8B949E" letter-spacing="0.5">one endpoint</text>
+
+  <!-- wordmark -->
+  <text x="400" y="195" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="48" font-weight="700" letter-spacing="-1.5" fill="currentColor">API Keychain</text>
+  <text x="400" y="228" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#8B949E" letter-spacing="0.2">One key for every free AI model.</text>
+</svg>

@@ -1,0 +1,11 @@
+<svg width="800" height="8" viewBox="0 0 800 8" fill="none" xmlns="http://www.w3.org/2000/svg" role="presentation" aria-hidden="true">
+  <style>
+    svg { color: #1f2328; }
+    @media (prefers-color-scheme: dark) { svg { color: #e6edf3; } }
+  </style>
+  <line x1="0" y1="4" x2="800" y2="4" stroke="#8B949E" stroke-opacity="0.18" stroke-width="1.5" />
+  <rect x="0" y="3" width="160" height="2" rx="1" fill="currentColor">
+    <animate attributeName="x" values="-160;800" dur="4s" repeatCount="indefinite" />
+    <animate attributeName="opacity" values="0;1;1;0" dur="4s" repeatCount="indefinite" />
+  </rect>
+</svg>
