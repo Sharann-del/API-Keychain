@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { LandingNav } from "@/components/landing-nav";
+import { PixelSwarm } from "@/components/pixel-swarm";
 import { Reveal } from "@/components/reveal";
 import { CodeTabs } from "@/components/code-tabs";
 import { ProviderLogo } from "@/components/provider-logo";
@@ -63,8 +64,14 @@ export default function LandingPage() {
 
 function Hero() {
   return (
-    <section className="relative px-5 pt-32 pb-20 sm:px-8 sm:pt-40 sm:pb-24">
-      <div className="mx-auto max-w-4xl text-center">
+    <section className="relative overflow-hidden px-5 pt-32 pb-20 sm:px-8 sm:pt-40 sm:pb-24">
+      <PixelSwarm className="[mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_80%)]" />
+      {/* Dark scrim so the hero copy stays legible over the swarm. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[34rem] w-[52rem] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 [background:radial-gradient(ellipse_at_center,hsl(var(--background))_18%,hsl(var(--background)/0.85)_42%,transparent_72%)]"
+      />
+      <div className="relative mx-auto max-w-4xl text-center">
         <Reveal delay={60}>
           <h1 className="display-hero font-heading">
             One API key for
@@ -74,7 +81,7 @@ function Hero() {
         </Reveal>
 
         <Reveal delay={120}>
-          <p className="mx-auto mt-6 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
+          <p className="mx-auto mt-6 max-w-xl text-pretty text-base leading-relaxed text-foreground/80 sm:text-lg">
             Unify {TOTAL_PROVIDERS} free-tier inference providers behind one
             gateway. OpenAI Chat Completions for Cursor and SDKs, Anthropic
             Messages for Claude Code — with effort-based routing, automatic
@@ -96,7 +103,7 @@ function Hero() {
         </Reveal>
       </div>
 
-      <Reveal delay={280} className="mx-auto mt-14 max-w-2xl">
+      <Reveal delay={280} className="relative mx-auto mt-14 max-w-2xl">
         <CodeTabs
           samples={[
             {
