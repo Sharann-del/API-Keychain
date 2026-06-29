@@ -11,7 +11,6 @@ import {
   Zap,
   CheckCircle2,
   GitBranch,
-  ArrowRight,
   MessageSquare,
 } from "lucide-react";
 
@@ -22,7 +21,6 @@ import { CodeTabs } from "@/components/code-tabs";
 import { ProviderLogo } from "@/components/provider-logo";
 import { Typewriter } from "@/components/typewriter";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { API_BASE_URL, PROXY_BASE_URL } from "@/lib/config";
 import { PROVIDERS, TIERS, TOTAL_MODELS, TOTAL_PROVIDERS } from "@/lib/catalog";
 import { cn, providerLabel } from "@/lib/utils";
@@ -100,19 +98,6 @@ function Hero() {
             Messages for Claude Code — with effort-based routing, automatic
             failover, and usage analytics.
           </p>
-        </Reveal>
-
-        <Reveal delay={180}>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Button asChild size="lg">
-              <Link href="/login">
-                Get started <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button asChild variant="secondary" size="lg">
-              <Link href="#start">View quickstart</Link>
-            </Button>
-          </div>
         </Reveal>
       </div>
 
@@ -666,16 +651,6 @@ function FinalCta() {
           Spin up your unified key in under a minute and route across every
           free-tier model from a single endpoint.
         </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Button asChild size="lg">
-            <Link href="/login">
-              Get started <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-          <Button asChild variant="secondary" size="lg">
-            <Link href="/login">Sign in</Link>
-          </Button>
-        </div>
       </Reveal>
     </section>
   );
