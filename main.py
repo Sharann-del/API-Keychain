@@ -18,7 +18,7 @@ import os
 import secrets
 import time
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator, Dict, List, Literal, Optional, Tuple
+from typing import Any, AsyncIterator, Callable, Dict, List, Literal, Optional, Tuple
 
 import jwt
 
@@ -1043,6 +1043,9 @@ def _load_provider_keys(db: Session, user_id: str) -> Dict[str, List[tuple]]:
     return provider_keys
 
 
+StreamByteTransform = Callable[[AsyncIterator[bytes]], AsyncIterator[bytes]]
+
+
 async def _execute_chat_completion(
     db: Session,
     user: User,
@@ -1050,6 +1053,7 @@ async def _execute_chat_completion(
     *,
     forward_body: Dict[str, Any],
     effort: str,
+    stream_transform: Optional[StreamByteTransform] = None,
 ):
     """Shared chat-completions pipeline for /v1/chat/completions and adapters."""
     if key.rate_limit_per_minute:
@@ -1088,7 +1092,15 @@ async def _execute_chat_completion(
 
     if forward_body.get("stream"):
         return await _stream_chat(
-            db, user, key, effort, forward_body, provider_keys, models, deprioritized
+            db,
+            user,
+            key,
+            effort,
+            forward_body,
+            provider_keys,
+            models,
+            deprioritized,
+            stream_transform=stream_transform,
         )
 
     started = time.perf_counter()
@@ -1146,101 +1158,24 @@ async def responses_create(
     forward_body = responses_to_openai_body(body)
     effort = resolve_responses_effort(body)
 
+    stream_transform: Optional[StreamByteTransform] = None
     if body.get("stream"):
-        return await _stream_responses(db, user, key, effort, forward_body, body)
+        request_snapshot = dict(body)
+        stream_transform = lambda stream: convert_openai_stream_to_responses(
+            stream, request_snapshot
+        )
 
-    forward_body = {**forward_body, "stream": False}
     openai_result = await _execute_chat_completion(
-        db, user, key, forward_body=forward_body, effort=effort
+        db,
+        user,
+        key,
+        forward_body=forward_body,
+        effort=effort,
+        stream_transform=stream_transform,
     )
-    if isinstance(openai_result, JSONResponse):
+    if isinstance(openai_result, (JSONResponse, StreamingResponse)):
         return openai_result
     return openai_to_responses_response(openai_result, body)
-
-
-async def _stream_responses(
-    db: Session,
-    user: User,
-    key: KeychainKey,
-    effort: str,
-    forward_body: Dict[str, Any],
-    request_body: Dict[str, Any],
-):
-    """Stream Responses API SSE by proxying the chat-completions stream."""
-    if key.rate_limit_per_minute:
-        used = _key_requests_last_minute(db, key.id)
-        if used >= key.rate_limit_per_minute:
-            return _openai_error(
-                status_code=429,
-                message=(
-                    f"Rate limit reached for this keychain key: "
-                    f"{key.rate_limit_per_minute} requests/min."
-                ),
-                err_type="rate_limit_error",
-                code="rate_limit_exceeded",
-            )
-
-    provider_keys = _load_provider_keys(db, user.id)
-    if not provider_keys:
-        raise HTTPException(
-            status_code=400,
-            detail="No provider keys configured for this user. "
-            "Add at least one via POST /users/{user_id}/keys.",
-        )
-
-    table = _effective_table(db, user.id)
-    prefs = _load_preferences(db, user.id)
-    models = effective_cascade(
-        table,
-        effort,
-        excluded_models=set(prefs["excluded_models"]),
-        excluded_providers=set(prefs["excluded_providers"]),
-        preferred_providers=prefs["preferred_providers"],
-    )
-    deprioritized = _cooling_down_providers(db, user.id)
-
-    started = time.perf_counter()
-    try:
-        handle = await open_stream(
-            models=models,
-            body={**forward_body, "stream": True},
-            provider_keys=provider_keys,
-            deprioritized_providers=deprioritized,
-            rotation_id=user.id,
-        )
-    except NoModelsAvailable as exc:
-        _log_request(db, user.id, effort, [], None, started, 409, key.id)
-        return _no_models_error(exc)
-    except AllProvidersFailed as exc:
-        _update_provider_health(db, user.id, exc.attempts)
-        _log_request(db, user.id, effort, exc.attempts, None, started, 502, key.id)
-        return _all_failed_error(exc)
-
-    _update_provider_health(db, user.id, handle.attempts)
-    log_id = _log_stream(db, user.id, effort, handle, started, key.id)
-
-    async def _bytes() -> AsyncIterator[bytes]:
-        try:
-            async for chunk in convert_openai_stream_to_responses(
-                _stream_with_usage_log(
-                    handle, tier=effort, log_id=log_id, started=started
-                ),
-                request_body,
-            ):
-                yield chunk
-        finally:
-            pass
-
-    return StreamingResponse(
-        _bytes(),
-        media_type="text/event-stream",
-        headers={
-            "X-Keychain-Provider": handle.provider,
-            "X-Keychain-Model": handle.model_entry,
-            "X-Keychain-Key-Label": handle.key_label or "",
-            "Cache-Control": "no-cache",
-        },
-    )
 
 
 @app.post("/v1/messages")
@@ -1473,6 +1408,8 @@ async def _stream_chat(
     provider_keys: Dict[str, List[tuple]],
     models: List[str],
     deprioritized: set,
+    *,
+    stream_transform: Optional[StreamByteTransform] = None,
 ):
     """Establish an upstream stream (with pre-start failover) and proxy its SSE.
 
@@ -1501,8 +1438,14 @@ async def _stream_chat(
     _update_provider_health(db, user.id, handle.attempts)
     log_id = _log_stream(db, user.id, effort, handle, started, key.id)
 
+    byte_stream: AsyncIterator[bytes] = _stream_with_usage_log(
+        handle, tier=effort, log_id=log_id, started=started
+    )
+    if stream_transform is not None:
+        byte_stream = stream_transform(byte_stream)
+
     return StreamingResponse(
-        _stream_with_usage_log(handle, tier=effort, log_id=log_id, started=started),
+        byte_stream,
         media_type="text/event-stream",
         headers={
             "X-Keychain-Provider": handle.provider,

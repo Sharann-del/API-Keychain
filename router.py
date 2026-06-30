@@ -278,54 +278,63 @@ async def open_stream(
     try:
         for model_entry, provider, upstream_model in candidates:
             base_url = PROVIDER_BASE_URLS[provider]
-            payload = _build_payload(body, upstream_model)
-            payload["stream"] = True
-            payload["stream_options"] = {"include_usage": True}
             keys = _rotate_keys(provider_keys[provider], f"{rotation_id}:{provider}")
 
             for key_label, encrypted_key in keys:
                 api_key = decrypt(encrypted_key)
-                req = client.build_request(
-                    "POST",
-                    f"{base_url}/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json=payload,
-                )
-                try:
-                    resp = await client.send(req, stream=True)
-                except httpx.RequestError as exc:
-                    attempts.append(
-                        Attempt(model_entry, provider, None, str(exc), key_label)
-                    )
-                    continue
+                base_payload = _build_payload(body, upstream_model)
+                base_payload["stream"] = True
+                # Prefer usage in-stream when supported; retry without
+                # stream_options on 4xx before failing over to the next key.
+                stream_payloads = [
+                    {**base_payload, "stream_options": {"include_usage": True}},
+                    base_payload,
+                ]
 
-                if resp.status_code >= 400:
-                    # Error before any stream data -> safe to fail over. Drain the
-                    # short error body so the connection can be reused/closed.
-                    text = (await resp.aread()).decode("utf-8", "replace")[:200]
-                    await resp.aclose()
-                    attempts.append(
-                        Attempt(
-                            model_entry, provider, resp.status_code, text, key_label
+                for variant_idx, payload in enumerate(stream_payloads):
+                    req = client.build_request(
+                        "POST",
+                        f"{base_url}/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {api_key}",
+                            "Content-Type": "application/json",
+                        },
+                        json=payload,
+                    )
+                    try:
+                        resp = await client.send(req, stream=True)
+                    except httpx.RequestError as exc:
+                        attempts.append(
+                            Attempt(model_entry, provider, None, str(exc), key_label)
                         )
-                    )
-                    continue
+                        break
 
-                attempts.append(
-                    Attempt(model_entry, provider, resp.status_code, None, key_label)
-                )
-                return StreamHandle(
-                    client=client,
-                    response=resp,
-                    provider=provider,
-                    model_entry=model_entry,
-                    upstream_model=upstream_model,
-                    key_label=key_label,
-                    attempts=attempts,
-                )
+                    if resp.status_code >= 400:
+                        # Error before any stream data -> safe to fail over. Drain the
+                        # short error body so the connection can be reused/closed.
+                        text = (await resp.aread()).decode("utf-8", "replace")[:200]
+                        await resp.aclose()
+                        attempts.append(
+                            Attempt(
+                                model_entry, provider, resp.status_code, text, key_label
+                            )
+                        )
+                        if variant_idx < len(stream_payloads) - 1:
+                            continue
+                        break
+
+                    attempts.append(
+                        Attempt(model_entry, provider, resp.status_code, None, key_label)
+                    )
+                    return StreamHandle(
+                        client=client,
+                        response=resp,
+                        provider=provider,
+                        model_entry=model_entry,
+                        upstream_model=upstream_model,
+                        key_label=key_label,
+                        attempts=attempts,
+                    )
 
         # No candidate started streaming.
         await client.aclose()
