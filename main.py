@@ -1161,9 +1161,9 @@ async def responses_create(
     stream_transform: Optional[StreamByteTransform] = None
     if body.get("stream"):
         request_snapshot = dict(body)
-        stream_transform = lambda stream: convert_openai_stream_to_responses(
-            stream, request_snapshot
-        )
+
+        def stream_transform(stream):
+            return convert_openai_stream_to_responses(stream, request_snapshot)
 
     openai_result = await _execute_chat_completion(
         db,
