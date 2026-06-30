@@ -6,7 +6,8 @@ import { toast } from "sonner";
 
 import { useAuth } from "@/lib/auth";
 import { api, useApi, API_BASE_URL, ApiError } from "@/lib/api";
-import { loadPrimaryKey } from "@/lib/keystore";
+import { loadPrimaryKey, loadPlaygroundCustomKey, savePlaygroundCustomKey, clearPlaygroundCustomKey } from "@/lib/keystore";
+import { ensurePrimaryKey } from "@/lib/primary-key";
 import { PROVIDER_SLUGS, TIER_LABELS } from "@/lib/catalog";
 import { providerLabel, cn } from "@/lib/utils";
 import type {
@@ -65,10 +66,20 @@ interface ChatMessage {
   routing?: MessageRouting;
 }
 
-const PLAYGROUND_KEY_STORAGE = "ak_playground_key";
+function extractApiErrorMessage(res: Response, body: unknown): string {
+  let message = `Request failed (${res.status})`;
+  if (body && typeof body === "object") {
+    const obj = body as Record<string, unknown>;
+    if (obj.error && typeof obj.error === "object") {
+      const err = obj.error as Record<string, unknown>;
+      if (typeof err.message === "string") message = err.message;
+    }
+  }
+  return message;
+}
 
-function playgroundKeyStorageKey(userId: string): string {
-  return `${PLAYGROUND_KEY_STORAGE}_${userId}`;
+function isInvalidKeyError(status: number, message: string): boolean {
+  return status === 401 && /invalid or revoked/i.test(message);
 }
 
 function shortModelLabel(model: string): string {
@@ -168,7 +179,7 @@ function RoutingStrip({
 }
 
 export default function PlaygroundPage() {
-  const { userId, ready } = useAuth();
+  const { userId, ready, session } = useAuth();
   const enabled = Boolean(userId && ready);
 
   const { data: keysData } = useApi<ListKeychainKeysResponse>(
@@ -200,18 +211,17 @@ export default function PlaygroundPage() {
   const chatScrollRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    if (!userId) return;
+    if (!userId || !ready) return;
     setCachedKey(loadPrimaryKey(userId));
-    try {
-      const stored = window.localStorage.getItem(playgroundKeyStorageKey(userId));
-      if (stored) {
-        setCustomKey(stored);
-        setKeyMode("custom");
-      }
-    } catch {
-      /* ignore */
+    const stored = loadPlaygroundCustomKey(userId);
+    if (stored) {
+      setCustomKey(stored);
+      setKeyMode("custom");
+    } else {
+      setCustomKey("");
+      setKeyMode("cached");
     }
-  }, [userId]);
+  }, [userId, ready]);
 
   React.useEffect(() => {
     if (prefsData && !prefsHydrated) {
@@ -248,17 +258,10 @@ export default function PlaygroundPage() {
   const persistCustomKey = (value: string) => {
     setCustomKey(value);
     if (!userId) return;
-    try {
-      if (value.trim()) {
-        window.localStorage.setItem(
-          playgroundKeyStorageKey(userId),
-          value.trim()
-        );
-      } else {
-        window.localStorage.removeItem(playgroundKeyStorageKey(userId));
-      }
-    } catch {
-      /* ignore */
+    if (value.trim()) {
+      savePlaygroundCustomKey(userId, value);
+    } else {
+      clearPlaygroundCustomKey(userId);
     }
   };
 
@@ -297,7 +300,18 @@ export default function PlaygroundPage() {
   const sendMessage = async () => {
     const text = input.trim();
     if (!text || sending) return;
-    if (!activeKey?.startsWith("ak-")) {
+
+    let apiKey = keyMode === "custom" ? customKey.trim() : cachedKey;
+    if (!apiKey?.startsWith("ak-") && userId && session?.access_token && keyMode === "cached") {
+      try {
+        apiKey = await ensurePrimaryKey(userId, session.access_token);
+        setCachedKey(apiKey);
+      } catch {
+        toast.error("Could not load your API key — try again in a moment");
+        return;
+      }
+    }
+    if (!apiKey?.startsWith("ak-")) {
       toast.error("Select or paste a valid ak- keychain key");
       return;
     }
@@ -405,38 +419,58 @@ export default function PlaygroundPage() {
     };
 
     try {
-      const res = await fetch(`${API_BASE_URL}/v1/chat/completions`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${activeKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: `keychain-${effort}`,
-          effort,
-          stream: true,
-          messages: [{ role: "user", content: text }],
-        }),
-        signal: controller.signal,
-      });
+      const postCompletion = (key: string) =>
+        fetch(`${API_BASE_URL}/v1/chat/completions`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: `keychain-${effort}`,
+            effort,
+            stream: true,
+            messages: [{ role: "user", content: text }],
+          }),
+          signal: controller.signal,
+        });
+
+      let res = await postCompletion(apiKey);
 
       if (!res.ok) {
-        let message = `Request failed (${res.status})`;
+        let errBody: unknown = null;
         try {
-          const errBody = await res.json();
-          if (errBody?.error?.message) message = errBody.error.message;
+          errBody = await res.json();
         } catch {
           /* ignore */
         }
+        let message = extractApiErrorMessage(res, errBody);
+
         if (
-          res.status === 401 &&
-          /invalid or revoked/i.test(message) &&
-          keyMode === "cached"
+          isInvalidKeyError(res.status, message) &&
+          userId &&
+          session?.access_token
         ) {
-          message =
-            "Invalid or revoked API key. Your saved key may be from local development — regenerate it in Settings, or paste a production ak- key above.";
+          if (keyMode === "custom") {
+            clearPlaygroundCustomKey(userId);
+            setCustomKey("");
+            setKeyMode("cached");
+          }
+          apiKey = await ensurePrimaryKey(userId, session.access_token);
+          setCachedKey(apiKey);
+          res = await postCompletion(apiKey);
+          if (!res.ok) {
+            try {
+              errBody = await res.json();
+            } catch {
+              errBody = null;
+            }
+            message = extractApiErrorMessage(res, errBody);
+            throw new Error(message);
+          }
+        } else {
+          throw new Error(message);
         }
-        throw new Error(message);
       }
 
       if (!res.body) throw new Error("No response body");

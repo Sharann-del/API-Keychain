@@ -4,13 +4,7 @@ import * as React from "react";
 import type { Session, User } from "@supabase/supabase-js";
 
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
-import { apiFetch } from "@/lib/api";
-import { savePrimaryKey, loadPrimaryKey, hasStalePrimaryKey, clearPrimaryKey } from "@/lib/keystore";
-import type {
-  CreatedKeychainKey,
-  InitUserResponse,
-  ListKeychainKeysResponse,
-} from "@/lib/types";
+import { bootstrapUser } from "@/lib/primary-key";
 
 interface AuthContextValue {
   loading: boolean;
@@ -25,38 +19,6 @@ interface AuthContextValue {
 }
 
 const AuthContext = React.createContext<AuthContextValue | undefined>(undefined);
-
-/**
- * Idempotently onboard the user on the backend: create the user row, then make
- * sure a primary ak- key exists and is cached locally for later reveal.
- */
-async function bootstrapUser(userId: string, token: string): Promise<void> {
-  await apiFetch<InitUserResponse>("/users/init", {
-    method: "POST",
-    token,
-  });
-
-  const existing = await apiFetch<ListKeychainKeysResponse>(
-    `/users/${userId}/keychain-keys`,
-    { token }
-  );
-  const hasPrimary = existing.keys.some((k) => k.is_primary && !k.revoked);
-
-  if (hasStalePrimaryKey(userId)) {
-    clearPrimaryKey(userId);
-  }
-  const hasCached = Boolean(loadPrimaryKey(userId));
-
-  if (!hasPrimary || !hasCached) {
-    // Mint (or rotate to) a primary key so the user always has a usable,
-    // revealable ak- key. regenerate-key creates the primary if absent.
-    const created = await apiFetch<CreatedKeychainKey>(
-      `/users/${userId}/regenerate-key`,
-      { method: "POST", token }
-    );
-    savePrimaryKey(userId, created.api_key);
-  }
-}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = React.useState(true);

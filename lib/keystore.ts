@@ -13,9 +13,18 @@ function metaStorageKey(userId: string): string {
 }
 
 function currentApiBase(): string {
-  return (
+  return normalizeApiBase(
     process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"
-  ).replace(/\/$/, "");
+  );
+}
+
+function normalizeApiBase(url: string): string {
+  try {
+    const parsed = new URL(url.includes("://") ? url : `https://${url}`);
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return url.replace(/\/$/, "");
+  }
 }
 
 function isLocalApi(url: string): boolean {
@@ -48,7 +57,7 @@ export function hasStalePrimaryKey(userId: string): boolean {
     // Legacy entries (pre gateway tag): only trust on local dev.
     return !isLocalApi(current);
   }
-  return meta.apiBaseUrl.replace(/\/$/, "") !== current;
+  return normalizeApiBase(meta.apiBaseUrl) !== current;
 }
 
 export function savePrimaryKey(userId: string, apiKey: string): void {
@@ -79,6 +88,38 @@ export function clearPrimaryKey(userId: string): void {
   try {
     window.localStorage.removeItem(storageKey(userId));
     window.localStorage.removeItem(metaStorageKey(userId));
+    window.localStorage.removeItem(playgroundKeyStorageKey(userId));
+  } catch {
+    /* ignore */
+  }
+}
+
+function playgroundKeyStorageKey(userId: string): string {
+  return `ak_playground_key_${userId}`;
+}
+
+export function clearPlaygroundCustomKey(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(playgroundKeyStorageKey(userId));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function loadPlaygroundCustomKey(userId: string): string | null {
+  if (typeof window === "undefined" || hasStalePrimaryKey(userId)) return null;
+  try {
+    return window.localStorage.getItem(playgroundKeyStorageKey(userId));
+  } catch {
+    return null;
+  }
+}
+
+export function savePlaygroundCustomKey(userId: string, apiKey: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(playgroundKeyStorageKey(userId), apiKey.trim());
   } catch {
     /* ignore */
   }
