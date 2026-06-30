@@ -3,38 +3,20 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Boxes,
-  Cpu,
-  SlidersHorizontal,
-  Settings,
-  LogOut,
-  KeyRound,
-  Menu,
-  X,
-  FlaskConical,
-  type LucideIcon,
-} from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 
-interface NavItem {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/playground", label: "Playground", icon: FlaskConical },
-  { href: "/keys", label: "API Keys", icon: KeyRound },
-  { href: "/providers", label: "Providers", icon: Boxes },
-  { href: "/models", label: "Models", icon: Cpu },
-  { href: "/preferences", label: "Preferences", icon: SlidersHorizontal },
-  { href: "/settings", label: "Settings", icon: Settings },
-];
+const NAV_ITEMS = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/playground", label: "Playground" },
+  { href: "/keys", label: "API Keys" },
+  { href: "/providers", label: "Providers" },
+  { href: "/models", label: "Models" },
+  { href: "/preferences", label: "Preferences" },
+  { href: "/settings", label: "Settings" },
+] as const;
 
 function NavLinks({
   pathname,
@@ -50,7 +32,6 @@ function NavLinks({
       {NAV_ITEMS.map((item) => {
         const active =
           pathname === item.href || pathname.startsWith(item.href + "/");
-        const Icon = item.icon;
 
         return (
           <li key={item.href}>
@@ -58,14 +39,13 @@ function NavLinks({
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-base font-medium transition-colors",
+                "inline-flex items-center rounded-full px-3 py-1.5 text-base font-medium transition-colors",
                 active
-                  ? "bg-secondary text-foreground"
-                  : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                  ? "bg-white/[0.14] text-foreground"
+                  : "text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
               )}
             >
-              <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
-              <span>{item.label}</span>
+              {item.label}
             </Link>
           </li>
         );
@@ -180,20 +160,18 @@ export function Topbar() {
             {NAV_ITEMS.map((item) => {
               const active =
                 pathname === item.href || pathname.startsWith(item.href + "/");
-              const Icon = item.icon;
               return (
                 <li key={item.href}>
                   <Link
                     href={item.href}
                     onClick={() => setMobileOpen(false)}
                     className={cn(
-                      "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-base font-medium",
+                      "flex items-center rounded-lg px-3 py-2.5 text-base font-medium",
                       active
-                        ? "bg-secondary text-foreground"
-                        : "text-muted-foreground hover:bg-secondary/60"
+                        ? "bg-white/[0.14] text-foreground"
+                        : "text-muted-foreground hover:bg-white/[0.08]"
                     )}
                   >
-                    <Icon className="h-4 w-4" strokeWidth={1.75} />
                     {item.label}
                   </Link>
                 </li>
