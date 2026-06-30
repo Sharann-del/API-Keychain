@@ -542,7 +542,7 @@ export default function PlaygroundPage() {
             </SelectContent>
           </Select>
         </div>
-        <div className="w-full space-y-1.5 sm:w-40">
+        <div className="w-full space-y-1.5 sm:w-auto sm:min-w-[9rem]">
           <label className="text-xs text-muted-foreground">Routing tier</label>
           <Select
             value={effort}
@@ -552,9 +552,9 @@ export default function PlaygroundPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="low">{TIER_LABELS.low} (keychain-low)</SelectItem>
-              <SelectItem value="medium">{TIER_LABELS.medium} (keychain-medium)</SelectItem>
-              <SelectItem value="high">{TIER_LABELS.high} (keychain-high)</SelectItem>
+              <SelectItem value="low">{TIER_LABELS.low}</SelectItem>
+              <SelectItem value="medium">{TIER_LABELS.medium}</SelectItem>
+              <SelectItem value="high">{TIER_LABELS.high}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -580,19 +580,23 @@ export default function PlaygroundPage() {
         </p>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         {/* Left — streaming chat */}
-        <Card className="flex min-h-[36rem] flex-col lg:min-h-[40rem]">
+        <Card className="flex w-full flex-col">
           <CardHeader className="pb-2">
             <CardTitle>Chat</CardTitle>
           </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
+          <CardContent className="flex flex-col gap-4">
             <div
               ref={chatScrollRef}
-              className="min-h-[28rem] flex-1 space-y-5 overflow-y-auto rounded-lg bg-secondary/30 px-4 py-5 scrollbar-thin lg:min-h-[32rem]"
+              className={cn(
+                "space-y-5 rounded-lg bg-secondary/30 px-4 py-5",
+                messages.length > 0 &&
+                  "max-h-[min(28rem,55vh)] overflow-y-auto scrollbar-thin"
+              )}
             >
               {messages.length === 0 ? (
-                <div className="flex h-full min-h-[20rem] items-center justify-center">
+                <div className="flex items-center justify-center py-6">
                   <p className="max-w-sm text-center text-sm text-muted-foreground">
                     Send a message to stream a completion through the gateway.
                   </p>
