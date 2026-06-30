@@ -39,6 +39,12 @@ from anthropic_adapter import (
     openai_to_anthropic_message,
     resolve_effort as resolve_anthropic_effort,
 )
+from responses_adapter import (
+    convert_openai_stream_to_responses,
+    openai_to_responses_response,
+    resolve_responses_effort,
+    responses_to_openai_body,
+)
 from crypto import encrypt, hash_token, mask_token
 from models import (
     KeychainKey,
@@ -1037,15 +1043,15 @@ def _load_provider_keys(db: Session, user_id: str) -> Dict[str, List[tuple]]:
     return provider_keys
 
 
-@app.post("/v1/chat/completions")
-async def chat_completions(
-    body: ChatCompletionRequest,
-    key: KeychainKey = Depends(require_key),
-    db: Session = Depends(get_db),
+async def _execute_chat_completion(
+    db: Session,
+    user: User,
+    key: KeychainKey,
+    *,
+    forward_body: Dict[str, Any],
+    effort: str,
 ):
-    user = db.get(User, key.user_id)
-
-    # Per-key rate limit (checked BEFORE touching any provider).
+    """Shared chat-completions pipeline for /v1/chat/completions and adapters."""
     if key.rate_limit_per_minute:
         used = _key_requests_last_minute(db, key.id)
         if used >= key.rate_limit_per_minute:
@@ -1068,14 +1074,6 @@ async def chat_completions(
             "Add at least one via POST /users/{user_id}/keys.",
         )
 
-    # A "keychain-<tier>" pseudo-model (from GET /v1/models) selects the effort.
-    effort = _resolve_effort(body)
-
-    # Forward the full request body (minus our custom fields) to the provider.
-    forward_body = body.model_dump(exclude_none=True)
-
-    # Build this user's effective, ordered model list (registry merged with
-    # their overrides + custom models + routing preferences).
     table = _effective_table(db, user.id)
     prefs = _load_preferences(db, user.id)
     models = effective_cascade(
@@ -1088,7 +1086,7 @@ async def chat_completions(
 
     deprioritized = _cooling_down_providers(db, user.id)
 
-    if body.stream:
+    if forward_body.get("stream"):
         return await _stream_chat(
             db, user, key, effort, forward_body, provider_keys, models, deprioritized
         )
@@ -1114,6 +1112,137 @@ async def chat_completions(
     _update_provider_health(db, user.id, result.attempts)
     _log_request(db, user.id, effort, result.attempts, result, started, 200, key.id)
     return result.data
+
+
+@app.post("/v1/chat/completions")
+async def chat_completions(
+    body: ChatCompletionRequest,
+    key: KeychainKey = Depends(require_key),
+    db: Session = Depends(get_db),
+):
+    user = db.get(User, key.user_id)
+    forward_body = body.model_dump(exclude_none=True)
+    effort = _resolve_effort(body)
+    return await _execute_chat_completion(
+        db, user, key, forward_body=forward_body, effort=effort
+    )
+
+
+@app.post("/v1/responses")
+async def responses_create(
+    request: Request,
+    key: KeychainKey = Depends(require_key),
+    db: Session = Depends(get_db),
+):
+    """OpenAI Responses API — for Codex CLI and other /v1/responses clients."""
+    try:
+        body = await request.json()
+    except Exception:
+        return _openai_error(400, "Invalid JSON body.")
+    if not isinstance(body, dict):
+        return _openai_error(400, "Request body must be a JSON object.")
+
+    user = db.get(User, key.user_id)
+    forward_body = responses_to_openai_body(body)
+    effort = resolve_responses_effort(body)
+
+    if body.get("stream"):
+        return await _stream_responses(
+            db, user, key, effort, forward_body, body
+        )
+
+    forward_body = {**forward_body, "stream": False}
+    openai_result = await _execute_chat_completion(
+        db, user, key, forward_body=forward_body, effort=effort
+    )
+    if isinstance(openai_result, JSONResponse):
+        return openai_result
+    return openai_to_responses_response(openai_result, body)
+
+
+async def _stream_responses(
+    db: Session,
+    user: User,
+    key: KeychainKey,
+    effort: str,
+    forward_body: Dict[str, Any],
+    request_body: Dict[str, Any],
+):
+    """Stream Responses API SSE by proxying the chat-completions stream."""
+    if key.rate_limit_per_minute:
+        used = _key_requests_last_minute(db, key.id)
+        if used >= key.rate_limit_per_minute:
+            return _openai_error(
+                status_code=429,
+                message=(
+                    f"Rate limit reached for this keychain key: "
+                    f"{key.rate_limit_per_minute} requests/min."
+                ),
+                err_type="rate_limit_error",
+                code="rate_limit_exceeded",
+            )
+
+    provider_keys = _load_provider_keys(db, user.id)
+    if not provider_keys:
+        raise HTTPException(
+            status_code=400,
+            detail="No provider keys configured for this user. "
+            "Add at least one via POST /users/{user_id}/keys.",
+        )
+
+    table = _effective_table(db, user.id)
+    prefs = _load_preferences(db, user.id)
+    models = effective_cascade(
+        table,
+        effort,
+        excluded_models=set(prefs["excluded_models"]),
+        excluded_providers=set(prefs["excluded_providers"]),
+        preferred_providers=prefs["preferred_providers"],
+    )
+    deprioritized = _cooling_down_providers(db, user.id)
+
+    started = time.perf_counter()
+    try:
+        handle = await open_stream(
+            models=models,
+            body={**forward_body, "stream": True},
+            provider_keys=provider_keys,
+            deprioritized_providers=deprioritized,
+            rotation_id=user.id,
+        )
+    except NoModelsAvailable as exc:
+        _log_request(db, user.id, effort, [], None, started, 409, key.id)
+        return _no_models_error(exc)
+    except AllProvidersFailed as exc:
+        _update_provider_health(db, user.id, exc.attempts)
+        _log_request(db, user.id, effort, exc.attempts, None, started, 502, key.id)
+        return _all_failed_error(exc)
+
+    _update_provider_health(db, user.id, handle.attempts)
+    log_id = _log_stream(db, user.id, effort, handle, started, key.id)
+
+    async def _bytes() -> AsyncIterator[bytes]:
+        try:
+            async for chunk in convert_openai_stream_to_responses(
+                _stream_with_usage_log(
+                    handle, tier=effort, log_id=log_id, started=started
+                ),
+                request_body,
+            ):
+                yield chunk
+        finally:
+            pass
+
+    return StreamingResponse(
+        _bytes(),
+        media_type="text/event-stream",
+        headers={
+            "X-Keychain-Provider": handle.provider,
+            "X-Keychain-Model": handle.model_entry,
+            "X-Keychain-Key-Label": handle.key_label or "",
+            "Cache-Control": "no-cache",
+        },
+    )
 
 
 @app.post("/v1/messages")

@@ -210,8 +210,9 @@ export default function KeysPage() {
               <CopyButton value={PROXY_BASE_URL} label="Base URL copied" />
             </div>
             <p className="text-xs text-muted-foreground">
-              Use with OpenAI SDKs, Cursor, and curl — append{" "}
-              <code className="font-mono">/chat/completions</code>.
+              Use with OpenAI SDKs, Codex CLI, Cursor, and curl — append{" "}
+              <code className="font-mono">/chat/completions</code> or{" "}
+              <code className="font-mono">/responses</code>.
             </p>
           </div>
 
@@ -292,6 +293,24 @@ claude`}
               <code className="font-mono">claude-sonnet-4-6</code> (balanced), or{" "}
               <code className="font-mono">claude-opus-4-6</code> (best) — all route
               through free-tier providers.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Codex CLI
+            </p>
+            <CodeBlock
+              code={`export OPENAI_BASE_URL="${PROXY_BASE_URL}"
+export OPENAI_API_KEY="${cachedKey ?? "ak-..."}"
+
+# Codex CLI v0.136+ calls POST /v1/responses on the base URL above.
+codex`}
+            />
+            <p className="text-xs text-muted-foreground">
+              Same <code className="font-mono">ak-</code> key. Point Codex at{" "}
+              <code className="font-mono">{PROXY_BASE_URL}</code> (includes{" "}
+              <code className="font-mono">/v1</code>) — the gateway translates
+              Responses API requests through the same routing cascade.
             </p>
           </div>
         </CardContent>

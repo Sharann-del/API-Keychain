@@ -5,13 +5,13 @@ approximate and priorities may shift based on community feedback.
 
 ## Now (v1.0.x) — Stable gateway & dashboard
 
-- [x] OpenAI-compatible `/v1/chat/completions` and `/v1/models`
+- [x] OpenAI-compatible `/v1/chat/completions`, `/v1/responses`, and `/v1/models`
 - [x] Anthropic-compatible `/v1/messages` for Claude Code
 - [x] Effort tiers with cascade failover (`keychain-low` / `medium` / `high`)
 - [x] Twelve provider integrations with cooldown-aware routing
 - [x] Encrypted provider key storage and keychain key rotation
 - [x] Usage analytics and provider health in the dashboard
-- [x] Streaming responses (OpenAI and Anthropic SSE)
+- [x] Streaming responses (OpenAI Chat Completions, Responses API, and Anthropic SSE)
 - [x] Automated test suite for routing and adapter primitives
 - [x] GitHub Actions CI on every PR (lint + build + gateway smoke test)
 - [x] Configurable CORS origins via `CORS_ORIGINS` environment variable

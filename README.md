@@ -85,7 +85,7 @@ A single `keychain-high` request flows through the gateway like this:
 | **Bring your own models** | Pin any model id a connected provider supports into a tier, then reorder its priority. |
 | **Usage analytics** | Per-model and per-provider request counts, token totals, success rate, latency, and daily volume. |
 | **Unified keychain key** | One revealable `ak-` key fronts everything and rotates without touching upstream credentials. |
-| **OpenAI-compatible** | Drop-in `/v1/chat/completions` and `/v1/models` for OpenAI SDKs (Cursor, OpenCode, etc.). |
+| **OpenAI-compatible** | Drop-in `/v1/chat/completions`, `/v1/responses`, and `/v1/models` for OpenAI SDKs, Codex CLI, Cursor, OpenCode, etc. |
 | **Anthropic Messages** | Native `/v1/messages` and `/v1/messages/count_tokens` for Claude Code and Anthropic-format clients. |
 | **Dual auth** | Bearer token or `x-api-key` header with your `ak-` keychain key. |
 
@@ -194,7 +194,7 @@ bridge:
 | :-- | :-- | :-- |
 | OpenAI SDK, Cursor, OpenCode, curl | Chat Completions (`/v1/chat/completions`) | Yes |
 | Claude Code | Anthropic Messages (`/v1/messages`) | Yes |
-| OpenAI Codex CLI (2026+) | Responses API (`/v1/responses`) | No — use LiteLLM as a bridge, or Cursor/OpenCode |
+| OpenAI Codex CLI v0.136+ | Responses API (`/v1/responses`) | Yes |
 
 ## Effort tiers
 
@@ -286,6 +286,7 @@ authorized with the keychain `ak-` key. Public endpoints need no auth.
 | `GET` | `/users/{id}/providers/health` | JWT | Per-provider status, cooldowns, and counts. |
 | `GET` | `/users/{id}/usage` | JWT | Aggregate usage and breakdowns. |
 | `POST` | `/v1/chat/completions` | Keychain key | OpenAI-compatible chat completions. |
+| `POST` | `/v1/responses` | Keychain key | OpenAI Responses API (Codex CLI). |
 | `POST` | `/v1/messages` | Keychain key | Anthropic Messages API (Claude Code). |
 | `POST` | `/v1/messages/count_tokens` | Keychain key | Token estimate for Anthropic clients. |
 | `GET` | `/v1/models` | Keychain key | OpenAI-compatible model list. |
@@ -352,6 +353,7 @@ api-keychain/
 ├─ examples/             Runnable curl, Python, TypeScript, Node, Next.js samples
 ├─ main.py               FastAPI application, gateway and management API
 ├─ anthropic_adapter.py  Anthropic ↔ OpenAI translation for /v1/messages
+├─ responses_adapter.py  Responses ↔ OpenAI translation for /v1/responses
 ├─ env_loader.py         Loads .env.local / .env before other modules read env
 ├─ router.py             Request routing, cascade, and failover
 ├─ registry.py           Provider catalog and model tiers

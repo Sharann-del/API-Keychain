@@ -56,7 +56,7 @@ or `POST /users/{id}/regenerate-key`.
 | Surface | Auth mechanism |
 | --- | --- |
 | `/users/*` management routes | Supabase JWT (HS256 legacy secret and asymmetric JWKS via `SUPABASE_URL`) |
-| `/v1/chat/completions`, `/v1/models` | Bearer `ak-...` keychain key |
+| `/v1/chat/completions`, `/v1/responses`, `/v1/models` | Bearer `ak-...` keychain key |
 | `/health`, `/providers`, `/models` | Public catalog endpoints |
 
 ### Runtime exposure

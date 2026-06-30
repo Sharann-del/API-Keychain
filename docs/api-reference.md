@@ -7,7 +7,7 @@ Base URL: `http://localhost:8000` (or your deployed gateway).
 | Route prefix | Auth header |
 | --- | --- |
 | `/users/*` | `Authorization: Bearer <supabase-jwt>` |
-| `/v1/chat/completions`, `/v1/models` | `Authorization: Bearer ak-<keychain-key>` |
+| `/v1/chat/completions`, `/v1/responses`, `/v1/models` | `Authorization: Bearer ak-<keychain-key>` |
 | `/v1/messages`, `/v1/messages/count_tokens` | `Authorization: Bearer ak-...` **or** `x-api-key: ak-...` |
 | `/health`, `/providers`, `/models` | None |
 
@@ -56,6 +56,31 @@ OpenAI-compatible chat completions with effort-tier routing.
 - `409` — No models available after filters
 - `429` — Per-key rate limit exceeded
 - `502` — All providers failed (`all_providers_failed`)
+
+### `POST /v1/responses`
+
+OpenAI Responses API for Codex CLI and other `/v1/responses` clients. Translates
+the request to Chat Completions, routes through the same effort-tier cascade,
+and returns a Responses-shaped JSON (or SSE stream when `stream: true`).
+
+**Headers:** `Authorization: Bearer ak-...`
+
+**Body (subset):**
+
+```json
+{
+  "model": "keychain-medium",
+  "input": "Hello",
+  "stream": false
+}
+```
+
+Multi-turn agentic clients may send structured `input` arrays with `message`,
+`function_call`, `function_call_output`, and `reasoning` items — these are
+converted to Chat Completions `messages` before routing.
+
+**Responses:** Same status codes as Chat Completions; body uses the Responses
+API `output` array (`message`, `function_call`, etc.) instead of `choices`.
 
 ### `GET /v1/models`
 

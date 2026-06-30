@@ -571,7 +571,7 @@ function Quickstart() {
             align="left"
             eyebrow="Quickstart"
             title="If you can call OpenAI or Claude, you're already done"
-            subtitle="Swap the base URL and key. OpenAI Chat Completions and Anthropic Messages both route through the same cascade."
+            subtitle="Swap the base URL and key. Chat Completions, Responses API, and Anthropic Messages all route through the same cascade."
           />
           <ul className="mt-6 space-y-3">
             {[
@@ -613,6 +613,16 @@ export ANTHROPIC_API_KEY="ak-•••••••••••••••"
 
 # Claude Code uses /v1/messages — routed via your tier cascade
 claude`,
+              },
+              {
+                id: "codex",
+                label: "Codex CLI",
+                file: "codex.sh",
+                code: `export OPENAI_BASE_URL="${PROXY_BASE_URL}"
+export OPENAI_API_KEY="ak-•••••••••••••••"
+
+# Codex CLI v0.136+ uses POST /v1/responses
+codex`,
               },
               {
                 id: "after",

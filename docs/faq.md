@@ -40,7 +40,8 @@ with user overrides applied.
 | `claude-sonnet-4-6` | medium | **Balanced** |
 | `claude-opus-4-6` | high | **Best** |
 
-The same cascade runs whether you call `/v1/chat/completions` with
+The same cascade runs whether you call `/v1/chat/completions`,
+`/v1/responses` (Codex CLI), or `/v1/messages` (Claude Code) with
 `keychain-medium` or `/v1/messages` with `claude-sonnet-4-6`. All upstream
 models are free-tier.
 
@@ -83,6 +84,7 @@ platform.
 **OpenAI-compatible:**
 
 - `POST /v1/chat/completions` (including `stream: true`)
+- `POST /v1/responses` (including `stream: true`, for Codex CLI)
 - `GET /v1/models`
 
 **Anthropic-compatible:**

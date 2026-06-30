@@ -10,6 +10,7 @@ analytics.
 flowchart TB
     subgraph clients [Clients]
         SDK[OpenAI SDK / curl]
+        Codex[Codex CLI]
         Claude[Claude Code]
         Browser[Dashboard browser]
     end
@@ -27,8 +28,10 @@ flowchart TB
     subgraph gateway [FastAPI Gateway :8000]
         Mgmt["/users/* management API"]
         V1["/v1/chat/completions"]
+        Responses["/v1/responses"]
         Anthropic["/v1/messages"]
         Adapter[anthropic_adapter.py]
+        ResponsesAdapter[responses_adapter.py]
         Router[router.py cascade]
         Crypto[crypto.py AES-GCM]
         Registry[registry.py tiers]
@@ -45,12 +48,15 @@ flowchart TB
     end
 
     SDK -->|Bearer ak-...| V1
+    Codex -->|Bearer ak-...| Responses
     Claude -->|x-api-key ak-...| Anthropic
     Browser --> Auth
     Auth --> SupaAuth
     Browser --> APIClient
     APIClient -->|JWT| Mgmt
     V1 --> Router
+    Responses --> ResponsesAdapter
+    ResponsesAdapter --> Router
     Anthropic --> Adapter
     Adapter --> Router
     Mgmt --> Crypto
