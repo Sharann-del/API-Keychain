@@ -1147,9 +1147,7 @@ async def responses_create(
     effort = resolve_responses_effort(body)
 
     if body.get("stream"):
-        return await _stream_responses(
-            db, user, key, effort, forward_body, body
-        )
+        return await _stream_responses(db, user, key, effort, forward_body, body)
 
     forward_body = {**forward_body, "stream": False}
     openai_result = await _execute_chat_completion(
