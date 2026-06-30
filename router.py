@@ -324,7 +324,9 @@ async def open_stream(
                         break
 
                     attempts.append(
-                        Attempt(model_entry, provider, resp.status_code, None, key_label)
+                        Attempt(
+                            model_entry, provider, resp.status_code, None, key_label
+                        )
                     )
                     return StreamHandle(
                         client=client,
